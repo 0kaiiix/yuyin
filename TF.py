@@ -1,6 +1,6 @@
 #
 import streamlit as st
-import ollama
+import google.generativeai as genai
 from gtts.lang import tts_langs
 from gtts import gTTS
 import base64
@@ -9,7 +9,47 @@ import time
 from streamlit_lottie import st_lottie
 import requests
 import json
+import os
+from dotenv import load_dotenv
 #streamlit run TF.py
+
+# 載入環境變數
+try:
+    load_dotenv(encoding='utf-8')
+    GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+    if not GOOGLE_API_KEY:
+        st.error("未找到 GOOGLE_API_KEY 環境變數")
+        st.info("請在 .env 檔案中設置 GOOGLE_API_KEY=您的API金鑰")
+        with st.expander("如何設置 .env 檔案"):
+            st.markdown("""
+            1. 在專案資料夾中找到或創建 `.env` 檔案
+            2. 使用記事本或其他文字編輯器以 UTF-8 編碼開啟此檔案
+            3. 輸入以下內容（用您的實際 API 金鑰替換）:
+            ```
+            GOOGLE_API_KEY=您的Gemini_API金鑰
+            ```
+            4. 儲存檔案並重新啟動應用程式
+            
+            **取得API金鑰的方法**:
+            1. 訪問 [Google AI Studio](https://aistudio.google.com/)
+            2. 註冊或登入您的 Google 帳號
+            3. 前往 API 頁面
+            4. 創建 API Key
+            """)
+        st.stop()
+except Exception as e:
+    st.error(f"載入 .env 檔案時出錯: {e}")
+    st.info("請確保 .env 檔案以 UTF-8 編碼儲存，並使用正確的格式")
+    st.stop()
+
+# 設置 Google Gemini API
+try:
+    genai.configure(api_key=GOOGLE_API_KEY)
+    model = genai.GenerativeModel('gemini-1.5-pro')
+except Exception as e:
+    st.error(f"設置 Gemini API 時出錯: {e}")
+    st.info("請確認您的 API 金鑰是否有效")
+    st.stop()
 
 # 頁面配置和樣式設定
 st.set_page_config(
@@ -151,7 +191,7 @@ with st.sidebar:
     
     st.markdown("---")
     st.markdown("### 🤖 關於")
-    st.markdown("這是一個使用Gemma 3和gTTS的AI對話與語音合成應用")
+    st.markdown("這是一個使用 Google Gemini 和 gTTS 的 AI 對話與語音合成應用")
     
     # 顯示小機器人動畫在側邊欄
     try:
@@ -163,7 +203,11 @@ with st.sidebar:
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     st.title("🤖 AI 語音助手")
-    st.markdown("### 與 Gemma 3 模型即時對話，並聆聽 AI 的回應")
+    st.markdown("### 與 Google Gemini 模型即時對話，並聆聽 AI 的回應")
+
+# 初始化聊天歷史
+if "gemini_chat_history" not in st.session_state:
+    st.session_state.gemini_chat_history = model.start_chat(history=[])
 
 # 聊天容器
 chat_container = st.container()
@@ -206,10 +250,10 @@ if send_button:
                 except Exception:
                     st.markdown("⏳ **AI正在處理您的請求...**")
             
-            # 發送請求到Gemma模型
+            # 發送請求到Gemini模型
             try:
-                response = ollama.chat(model='gemma3:1b', messages=[{'role': 'user', 'content': user_input}])
-                ai_response = response['message']['content']
+                response = st.session_state.gemini_chat_history.send_message(user_input)
+                ai_response = response.text
             except Exception as e:
                 ai_response = f"抱歉，處理您的請求時發生錯誤: {str(e)}"
                 st.error(f"錯誤: {str(e)}")
