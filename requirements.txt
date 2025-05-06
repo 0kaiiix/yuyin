@@ -1,4 +1,12 @@
-streamlit
-streamlit-lottie
-ollama
-gTTS
+# 主要套件
+streamlit==1.44.1
+google-generativeai==0.8.5
+gTTS==2.5.1
+python-dotenv==1.1.0
+
+# 視覺化與互動元件
+streamlit-lottie==0.0.5
+requests==2.32.3
+
+# 格式處理
+python-dateutil==2.9.0.post0
